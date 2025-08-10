@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Midomatic Fitness — Bookings</title>
+
+  <!-- PWA / iOS full-screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Midomatic Fitness" />
+  <meta name="description" content="Midomatic Fitness — minimal premium booking & scheduling (Admin + Clients). Add to Home Screen for app-like access." />
+  <meta name="theme-color" content="#0b0b0b" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23b68a18'/><text x='50' y='57' font-size='42' text-anchor='middle' fill='white' font-family='Inter,Arial' font-weight='700'>MF</text></svg>">
+
+  <!-- Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#ffffff; --panel:#fbfbfb; --muted:#6b6b6b; --text:#0b0b0b;
+      --gold:#b68a18; --dark:#0b0b0b; --radius:14px;
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;color:var(--text)}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#fff,#fcfcfc);}
+    .app{max-width:1100px;margin:26px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:14px}
+    .logo{width:72px;height:72px;border-radius:16px;background:linear-gradient(135deg,var(--gold),#ffd97d);display:flex;align-items:center;justify-content:center;color:#111;font-weight:800;font-size:22px;box-shadow:0 8px 28px rgba(182,138,24,0.14)}
+    h1{margin:0;font-size:20px}
+    .tag{font-size:13px;color:var(--muted)}
+    .actions{display:flex;gap:8px;align-items:center}
+    button{border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:600}
+    .btn-primary{background:var(--gold);color:#111;box-shadow:0 8px 20px rgba(182,138,24,0.14)}
+    .btn-ghost{background:transparent;border:1px solid rgba(11,11,11,0.06);padding:9px 12px}
+    main{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:20px}
+    .card{background:var(--panel);border-radius:var(--radius);padding:18px;box-shadow:0 10px 30px rgba(11,11,11,0.04)}
+    .muted{color:var(--muted);font-size:13px}
+    .section{margin-bottom:14px}
+    .tabs{display:flex;gap:8px;margin-bottom:12px}
+    .tab{padding:8px 12px;border-radius:10px;background:transparent;border:1px solid rgba(11,11,11,0.04);cursor:pointer;font-weight:600}
+    .tab.active{background:var(--dark);color:#fff}
+    input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(11,11,11,0.06);background:transparent}
+    .slots{display:grid;gap:10px}
+    .slot{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;background:linear-gradient(180deg,rgba(11,11,11,0.02),rgba(11,11,11,0.01))}
+    .pill{padding:6px 8px;border-radius:10px;background:rgba(11,11,11,0.06);font-size:13px}
+    .tiny{font-size:12px;color:var(--muted)}
+    .center{display:flex;align-items:center;gap:8px}
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+    .hidden{display:none}
+    @media (max-width:960px){ main{grid-template-columns:1fr} .logo{width:58px;height:58px} }
+  </style>
+</head>
+<body>
+  <div class="app" id="appRoot">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden>MF</div>
+        <div>
+          <h1>Midomatic Fitness</h1>
+          <div class="tag">let’s reverse age — premium minimal scheduling</div>
+          <div class="tiny">Timezone: <strong>Asia/Kuwait (UTC+03:00)</strong> • Slot: <strong>60 min</strong></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div id="statusLabel" class="muted">Not signed in</div>
+        <button id="btnExport" class="btn-ghost">Export</button>
+        <button id="btnImport" class="btn-ghost">Import</button>
+        <button id="btnHomeGuide" class="btn-ghost">How to add</button>
+        <button id="openLogin" class="btn-primary">Open</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- LEFT: Public / booking flow (clients) -->
+      <section>
+        <div class="card" id="publicMain">
+          <div class="section">
+            <div class="tabs" id="publicTabs">
+              <div class="tab active" data-tab="browse">Browse & Book</div>
+              <div class="tab" data-tab="my">My Bookings</div>
+              <div class="tab" data-tab="account">Account</div>
+            </div>
+            <div class="muted tiny">Clients: create an account, sign in, and request bookings. Admin must approve requests to confirm them.</div>
+          </div>
+
+          <div id="panel-browse" class="section">
+            <h3 style="margin:0 0 8px 0">Available slots</h3>
+            <div id="slotsList" class="slots"></div>
+            <div id="noSlots" class="tiny muted hidden" style="margin-top:10px">No slots open — admin will add availability soon.</div>
+          </div>
+
+          <div id="panel-my" class="section hidden">
+            <h3 style="margin:0 0 8px 0">My bookings</h3>
+            <div id="myList" class="slots"></div>
+            <div id="noMy" class="tiny muted hidden">You have no bookings yet.</div>
+          </div>
+
+          <div id="panel-account" class="section hidden">
+            <div id="accountUnauthed">
+              <h3 style="margin:0 0 8px 0">Create account</h3>
+              <div style="display:grid;gap:8px">
+                <input id="regName" placeholder="Full name (optional)" />
+                <input id="regUsername" placeholder="Username" />
+                <input id="regEmail" placeholder="Email (optional)" />
+                <input id="regPassword" placeholder="Password" type="password" />
+                <div style="display:flex;gap:8px">
+                  <button id="btnRegister" class="btn-primary">Sign up</button>
+                  <button id="showClientLogin" class="btn-ghost">Log in</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="accountAuthed" class="hidden">
+              <h3 style="margin:0 0 8px 0">Account</h3>
+              <div class="tiny muted">Signed in as <strong id="clientDisplay"></strong> (<span id="clientUser"></span>)</div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button id="btnClientLogout" class="btn-ghost">Sign out</button>
+                <button id="btnExportMy" class="btn-ghost">Export my bookings</button>
+              </div>
+            </div>
+
+            <div id="clientLoginBox" class="hidden" style="margin-top:12px">
+              <h3 style="margin:0 0 8px 0">Client login</h3>
+              <div style="display:grid;gap:8px">
+                <input id="loginUser" placeholder="Username" />
+                <input id="loginPass" placeholder="Password" type="password" />
+                <div style="display:flex;gap:8px">
+                  <button id="btnLogin" class="btn-primary">Log in</button>
+                  <button id="showRegister" class="btn-ghost">Create account</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="card">
+          <h4 style="margin:0 0 8px 0">How it works</h4>
+          <ol style="margin:0 0 0 18px;padding:0" class="tiny muted">
+            <li style="margin-bottom:6px">Admin (you) adds availability slots — each slot is 60 minutes.</li>
+            <li style="margin-bottom:6px">Clients request a booking on any open slot.</li>
+            <li style="margin-bottom:6px">Bookings remain <strong>Pending</strong> until you approve. Approved slots are reserved.</li>
+            <li style="margin-bottom:6px">Data lives in the browser — use Export to back up and Import to restore.</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- RIGHT: Admin panel -->
+      <aside>
+        <div class="card" id="adminCard">
+          <div id="adminLoggedOut">
+            <h3 style="margin:0 0 8px 0">Admin sign in</h3>
+            <div class="tiny muted" style="margin-bottom:8px">Use your admin credentials to manage slots & bookings.</div>
+            <input id="adminUser" placeholder="Username" value="Midomatic fitness" />
+            <input id="adminPass" placeholder="Password" type="password" />
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button id="btnAdminLogin" class="btn-primary">Sign in</button>
+              <button id="btnResetSite" class="btn-ghost" title="Reset local data (keeps seeded admin)">Reset</button>
+            </div>
+            <div class="tiny muted" style="margin-top:10px">Admin account is pre-created.</div>
+          </div>
+
+          <div id="adminPanel" class="hidden">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div class="tiny muted">Signed in as admin</div>
+                <div style="font-weight:700" id="adminDisplay"></div>
+              </div>
+              <div>
+                <button id="btnAdminLogout" class="btn-ghost">Sign out</button>
+              </div>
+            </div>
+
+            <hr style="margin:12px 0;border:none;border-top:1px solid rgba(0,0,0,0.06)">
+
+            <div>
+              <h4 style="margin:0 0 8px 0">Add availability</h4>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div><label class="tiny muted">Date</label><input id="slotDate" type="date" /></div>
+                <div><label class="tiny muted">Start time</label><input id="slotTime" type="time" /></div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button id="btnAddSlot" class="btn-primary">Add slot (60m)</button>
+                <button id="btnBulkAdd" class="btn-ghost" title="adds same time next 7 days">Repeat 7 days</button>
+              </div>
+            </div>
+
+            <div style="margin-top:14px">
+              <h4 style="margin:0 0 8px 0">Your slots</h4>
+              <div id="adminSlots" class="slots"></div>
+            </div>
+
+            <div style="margin-top:12px">
+              <h4 style="margin:0 0 8px 0">Bookings</h4>
+              <div id="adminBookings" class="slots"></div>
+            </div>
+
+            <div style="margin-top:12px;display:flex;gap:8px">
+              <button id="btnExportAll" class="btn-ghost">Export JSON</button>
+              <button id="btnImportAll" class="btn-ghost">Import JSON</button>
+              <button id="btnClearAll" class="btn-ghost" style="background:#fff0f0;border:1px solid #ffd6d6">Clear all data</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="card">
+          <div class="tiny muted"><strong>Quick tips</strong></div>
+          <ul class="tiny muted" style="margin:8px 0 0 18px;padding:0">
+            <li style="margin-bottom:6px">Add to Home Screen on iPhone for full-screen, app-like experience.</li>
+            <li style="margin-bottom:6px">Use Export regularly to backup bookings & users.</li>
+            <li style="margin-bottom:6px">If you want multi-device syncing, I can upgrade this to Firebase or Supabase.</li>
+          </ul>
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <div class="tiny muted">Midomatic Fitness • Local-only prototype • Save & host the file on GitHub Pages for a public link</div>
+    </footer>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+  /* Midomatic Fitness — single-file booking app
+     - Appointment length: 60 minutes
+     - Admin seeded: username "Midomatic fitness" password "Midomaticreps121"
+     - Timezone: Asia/Kuwait (UTC+03:00)
+     - Data stored in localStorage keys: mf_users_v2, mf_slots_v2, mf_bookings_v2
+     - Ready for GitHub Pages hosting (upload as index.html)
+  */
+
+  (function(){
+    const APPT_MIN = 60;
+    const STORAGE = { users:'mf_users_v2', slots:'mf_slots_v2', bookings:'mf_bookings_v2' };
+    const qs = s => document.querySelector(s);
+    const qsa = s => document.querySelectorAll(s);
+
+    function uid(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,10); }
+    function load(key){ try{ return JSON.parse(localStorage.getItem(key))||[] }catch(e){return[]} }
+    function save(key,val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+    /* seed admin */
+    function ensureAdminSeed(){
+      const users = load(STORAGE.users);
+      if(!users.some(u=>u.isAdmin)){
+        users.push({ id: uid('usr'), username: 'Midomatic fitness', password: 'Midomaticreps121', name:'Midomatic Fitness', email:'', isAdmin:true, createdAt: new Date().toISOString() });
+        save(STORAGE.users, users);
+      }
+    }
+    ensureAdminSeed();
+
+    /* sessions */
+    let admin = null, client = null;
+    function resumeSession(){
+      const sa = localStorage.getItem('mf_admin_session');
+      const sc = localStorage.getItem('mf_client_session');
+      if(sa){ try{ const o=JSON.parse(sa); admin = load(STORAGE.users).find(u=>u.id===o.id && u.isAdmin) || null; }catch{} }
+      if(sc){ try{ const o=JSON.parse(sc); client = load(STORAGE.users).find(u=>u.id===o.id && !u.isAdmin) || null; }catch{} }
+    }
+    resumeSession();
+
+    /* UI refs */
+    const statusLabel = qs('#statusLabel');
+    const panelBrowse = qs('#panel-browse'), panelMy = qs('#panel-my'), panelAccount = qs('#panel-account');
+    const tabs = qs('#publicTabs');
+
+    /* helpers */
+    function escape(s){ return String(s||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+    function computeEnd(start){
+      const [h,m] = start.split(':').map(Number);
+      const dt = new Date(Date.UTC(1970,0,1,h,m));
+      dt.setUTCMinutes(dt.getUTCMinutes()+APPT_MIN);
+      const hh = String(dt.getUTCHours()).padStart(2,'0'), mm = String(dt.getUTCMinutes()).padStart(2,'0');
+      return hh+':'+mm;
+    }
+
+    /* render status / panels */
+    function renderStatus(){
+      if(admin) statusLabel.innerHTML = 'Admin: <strong>'+escape(admin.username)+'</strong>';
+      else if(client) statusLabel.innerHTML = 'Client: <strong>'+escape(client.username)+'</strong>';
+      else statusLabel.textContent = 'Not signed in';
+      renderPublic();
+      renderAdmin();
+    }
+
+    /* Public: browse slots */
+    function getSlots(){ return load(STORAGE.slots); }
+    function getBookings(){ return load(STORAGE.bookings); }
+    function getUsers(){ return load(STORAGE.users); }
+    function saveSlots(sl){ save(STORAGE.slots, sl); }
+    function saveBookings(bk){ save(STORAGE.bookings, bk); }
+    function saveUsers(us){ save(STORAGE.users, us); }
+
+    function renderPublic(){
+      // tabs handling
+      qsa('#publicTabs .tab').forEach(t=> t.classList.remove('active'));
+      qs('#publicTabs .tab[data-tab="browse"]').classList.add('active');
+      // available slots (exclude slots that have approved booking)
+      const slots = getSlots().slice().sort((a,b)=> (a.date+a.start) > (b.date+b.start) ? 1 : -1);
+      const bookings = getBookings();
+      const available = slots.filter(s=> !bookings.some(b=>b.slotId===s.id && b.status==='approved'));
+      const slotsList = qs('#slotsList'); slotsList.innerHTML='';
+      if(available.length===0){ qs('#noSlots').classList.remove('hidden'); } else qs('#noSlots').classList.add('hidden');
+      available.forEach(s=>{
+        const pending = bookings.filter(b=>b.slotId===s.id && b.status==='pending').length;
+        const el = document.createElement('div'); el.className='slot';
+        el.innerHTML = `
+          <div>
+            <div style="font-weight:700">${escape(s.date)}</div>
+            <div class="tiny muted">${escape(s.start)} — ${escape(s.end)} • ${APPT_MIN} min</div>
+            <div class="tiny muted">Created: ${new Date(s.createdAt).toLocaleString()}</div>
+          </div>
+          <div class="center">
+            <div class="tiny muted" style="margin-right:8px">${pending? pending+' request(s)' : '<span class="pill">open</span>'}</div>
+            <div><button class="btn-primary btnRequest" data-id="${s.id}">Request</button></div>
+          </div>
+        `;
+        slotsList.appendChild(el);
+      });
+      qsa('.btnRequest').forEach(b=> b.onclick = ()=> {
+        if(!client){ alert('Sign in or create a client account to request bookings.'); showLogin(); return; }
+        requestBooking(b.dataset.id);
+      });
+
+      // my bookings
+      renderMyBookings();
+      // account box
+      renderAccountBox();
+    }
+
+    function renderMyBookings(){
+      const myList = qs('#myList'); myList.innerHTML='';
+      if(!client){ qs('#noMy').classList.remove('hidden'); return; } else qs('#noMy').classList.add('hidden');
+      const bookings = getBookings().filter(b=>b.clientId===client.id).sort((a,b)=> a.createdAt > b.createdAt ? -1 : 1);
+      if(bookings.length===0){ qs('#noMy').classList.remove('hidden'); return; } else qs('#noMy').classList.add('hidden');
+      const slots = getSlots();
+      bookings.forEach(b=>{
+        const slot = slots.find(s=>s.id===b.slotId);
+        const el = document.createElement('div'); el.className='slot';
+        el.innerHTML = `
+          <div>
+            <div style="font-weight:700">${slot? escape(slot.date) : '(removed)'}</div>
+            <div class="tiny muted">${slot? escape(slot.start)+' — '+escape(slot.end) : ''}</div>
+            <div class="tiny muted">Requested: ${new Date(b.createdAt).toLocaleString()}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="margin-bottom:8px">${formatStatus(b.status)}</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn-ghost btnCancel" data-id="${b.id}">${b.status==='pending' ? 'Cancel' : 'Remove'}</button>
+            </div>
+          </div>
+        `;
+        myList.appendChild(el);
+      });
+      qsa('.btnCancel').forEach(btn=> btn.onclick = ()=> {
+        if(!confirm('Remove this booking?')) return;
+        cancelBooking(btn.dataset.id);
+      });
+    }
+
+    function formatStatus(st){
+      if(st==='pending') return '<span style="color:#b8860b">Pending</span>';
+      if(st==='approved') return '<span style="color:green">Approved</span>';
+      if(st==='rejected') return '<span style="color:#b22222">Rejected</span>';
+      return escape(st);
+    }
+
+    function renderAccountBox(){
+      if(client){
+        qs('#accountUnauthed').classList.add('hidden');
+        qs('#clientLoginBox').classList.add('hidden');
+        qs('#accountAuthed').classList.remove('hidden');
+        qs('#clientDisplay').textContent = client.name || '';
+        qs('#clientUser').textContent = client.username;
+      } else {
+        qs('#accountUnauthed').classList.remove('hidden');
+        qs('#accountAuthed').classList.add('hidden');
+      }
+    }
+
+    /* Admin rendering */
+    function renderAdmin(){
+      if(admin){
+        qs('#adminLoggedOut').classList.add('hidden');
+        qs('#adminPanel').classList.remove('hidden');
+        qs('#adminDisplay').textContent = admin.name || admin.username;
+        // render slots & bookings
+        renderAdminSlots();
+        renderAdminBookings();
+      } else {
+        qs('#adminLoggedOut').classList.remove('hidden');
+        qs('#adminPanel').classList.add('hidden');
+      }
+    }
+
+    function renderAdminSlots(){
+      const el = qs('#adminSlots'); el.innerHTML='';
+      const slots = getSlots().slice().sort((a,b)=> (a.date+a.start) > (b.date+b.start) ? 1 : -1);
+      const bookings = getBookings();
+      if(slots.length===0){ el.innerHTML = '<div class="tiny muted">No slots yet.</div>'; return; }
+      slots.forEach(s=>{
+        const pending = bookings.filter(b=>b.slotId===s.id && b.status==='pending').length;
+        const taken = bookings.some(b=>b.slotId===s.id && b.status==='approved');
+        const slotEl = document.createElement('div'); slotEl.className='slot';
+        slotEl.innerHTML = `
+          <div>
+            <div style="font-weight:700">${escape(s.date)}</div>
+            <div class="tiny muted">${escape(s.start)} — ${escape(s.end)}</div>
+            <div class="tiny muted">Created: ${new Date(s.createdAt).toLocaleString()}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="margin-bottom:8px">${taken? '<span style="color:green">Reserved</span>' : (pending? '<span style="color:#b8860b">'+pending+' req</span>' : '<span class="pill">Open</span>')}</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn-ghost btnDel" data-id="${s.id}">Delete</button>
+            </div>
+          </div>
+        `;
+        el.appendChild(slotEl);
+      });
+      qsa('.btnDel').forEach(b=> b.onclick = ()=> {
+        if(!confirm('Delete this slot? This will also remove any pending requests.')) return;
+        deleteSlot(b.dataset.id);
+      });
+    }
+
+    function renderAdminBookings(){
+      const el = qs('#adminBookings'); el.innerHTML='';
+      const bookings = getBookings().slice().sort((a,b)=>{
+        const order = {'pending':0,'approved':1,'rejected':2};
+        if(a.status===b.status) return a.createdAt > b.createdAt ? -1 : 1;
+        return order[a.status] - order[b.status];
+      });
+      if(bookings.length===0){ el.innerHTML='<div class="tiny muted">No bookings.</div>'; return; }
+      bookings.forEach(b=>{
+        const slot = getSlots().find(s=>s.id===b.slotId);
+        const user = getUsers().find(u=>u.id===b.clientId);
+        const be = document.createElement('div'); be.className='slot';
+        be.innerHTML = `
+          <div>
+            <div style="font-weight:700">${slot? escape(slot.date) : '(removed)'}</div>
+            <div class="tiny muted">${slot? escape(slot.start)+' — '+escape(slot.end): ''}</div>
+            <div class="tiny muted">Client: ${user? escape(user.username) : '(deleted)'} • Requested: ${new Date(b.createdAt).toLocaleString()}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="margin-bottom:8px">${formatStatus(b.status)}</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              ${b.status==='pending' ? `<button class="btn-primary btnApprove" data-id="${b.id}">Approve</button><button class="btn-ghost btnReject" data-id="${b.id}">Reject</button>`
+              : `<button class="btn-ghost btnRemoveBooking" data-id="${b.id}">Remove</button>`}
+            </div>
+          </div>
+        `;
+        el.appendChild(be);
+      });
+      qsa('.btnApprove').forEach(b=> b.onclick = ()=> { if(confirm('Approve booking? This will reserve the slot.')) approveBooking(b.dataset.id); });
+      qsa('.btnReject').forEach(b=> b.onclick = ()=> { if(confirm('Reject booking?')) rejectBooking(b.dataset.id); });
+      qsa('.btnRemoveBooking').forEach(b=> b.onclick = ()=> { if(confirm('Remove booking?')) cancelBooking(b.dataset.id); });
+    }
+
+    /* actions */
+    function addSlot(date,start){
+      if(!date || !start){ alert('Pick date and start time'); return; }
+      const slots = getSlots();
+      if(slots.some(s=>s.date===date && s.start===start)){ alert('Slot already exists'); return; }
+      slots.push({ id: uid('slot'), date, start, end: computeEnd(start), createdAt: new Date().toISOString() });
+      saveSlots(slots); renderAdminSlots(); renderPublic(); alert('Slot added');
+    }
+    function deleteSlot(id){
+      let slots = getSlots(); let bookings = getBookings();
+      slots = slots.filter(s=>s.id!==id);
+      bookings = bookings.filter(b=>b.slotId!==id);
+      saveSlots(slots); saveBookings(bookings);
+      renderAdminSlots(); renderAdminBookings(); renderPublic(); alert('Slot removed');
+    }
+
+    function requestBooking(slotId){
+      const bookings = getBookings();
+      // check if slot already approved
+      if(bookings.some(b=>b.slotId===slotId && b.status==='approved')){ alert('Slot already reserved'); renderPublic(); return; }
+      if(bookings.some(b=>b.slotId===slotId && b.clientId===client.id)){ alert('You already requested this slot'); return; }
+      bookings.push({ id: uid('bk'), slotId, clientId: client.id, status:'pending', createdAt: new Date().toISOString() });
+      saveBookings(bookings);
+      alert('Booking requested. It will remain pending until admin approves.');
+      renderPublic(); renderAdminBookings(); renderMyBookings();
+    }
+
+    function cancelBooking(bookingId){
+      let bookings = getBookings();
+      const b = bookings.find(x=>x.id===bookingId);
+      if(!b) return;
+      // only owner or admin
+      if(!(client && client.id===b.clientId) && !admin){ alert('Not authorized'); return; }
+      bookings = bookings.filter(x=>x.id!==bookingId);
+      saveBookings(bookings);
+      renderPublic(); renderAdminBookings(); renderMyBookings();
+    }
+
+    function approveBooking(bookingId){
+      const bookings = getBookings();
+      const b = bookings.find(x=>x.id===bookingId);
+      if(!b) return alert('Not found');
+      // ensure no other approved booking on this slot
+      if(bookings.some(x=>x.slotId===b.slotId && x.status==='approved')) return alert('Slot already approved');
+      b.status='approved'; b.approvedAt=new Date().toISOString();
+      saveBookings(bookings);
+      alert('Booking approved.');
+      renderAdminBookings(); renderPublic(); renderMyBookings();
+    }
+
+    function rejectBooking(bookingId){
+      const bookings = getBookings();
+      const b = bookings.find(x=>x.id===bookingId);
+      if(!b) return;
+      b.status='rejected'; b.rejectedAt=new Date().toISOString();
+      saveBookings(bookings);
+      renderAdminBookings(); renderMyBookings();
+    }
+
+    /* Registration / login */
+    function registerClient({username,password,name,email}){
+      if(!username || !password) return alert('Provide username and password');
+      const users = getUsers();
+      if(users.some(u=>u.username.toLowerCase()===username.toLowerCase())) return alert('Username taken');
+      const u = { id: uid('usr'), username, password, name:name||'', email:email||'', isAdmin:false, createdAt:new Date().toISOString() };
+      users.push(u); saveUsers(users);
+      alert('Account created. You may now log in.');
+      // show login
+      showLogin();
+    }
+
+    function loginClient(username,password){
+      const user = getUsers().find(u=>u.username===username && u.password===password && !u.isAdmin);
+      if(!user) return alert('Invalid credentials');
+      client = user; localStorage.setItem('mf_client_session', JSON.stringify({id:user.id}));
+      renderStatus(); alert('Signed in');
+    }
+
+    function loginAdmin(username,password){
+      const user = getUsers().find(u=>u.username===username && u.password===password && u.isAdmin);
+      if(!user) return alert('Invalid admin credentials');
+      admin = user; localStorage.setItem('mf_admin_session', JSON.stringify({id:user.id}));
+      renderStatus(); alert('Admin signed in');
+    }
+
+    function logoutAdmin(){ admin=null; localStorage.removeItem('mf_admin_session'); renderStatus(); }
+    function logoutClient(){ client=null; localStorage.removeItem('mf_client_session'); renderStatus(); }
+
+    /* Export / Import */
+    function exportAll(){
+      const payload = { users: getUsers(), slots: getSlots(), bookings: getBookings(), exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}), url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='midomatic-data.json'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }
+    function importAllFile(file){
+      const reader = new FileReader();
+      reader.onload = e=>{
+        try{
+          const obj = JSON.parse(e.target.result);
+          if(!obj || !obj.users) return alert('Invalid file');
+          saveUsers(obj.users||[]); saveSlots(obj.slots||[]); saveBookings(obj.bookings||[]);
+          ensureAdminSeed(); alert('Import successful');
+          renderStatus();
+        }catch(err){ alert('Import failed: '+err.message); }
+      }; reader.readAsText(file);
+    }
+
+    /* Export client bookings */
+    function exportClientBookings(){
+      if(!client) return alert('Sign in first');
+      const bookings = getBookings().filter(b=>b.clientId===client.id);
+      const payload = { client:client.username, bookings, exportedAt:new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}), url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=client.username+'-bookings.json'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }
+
+    /* Clear all data */
+    function clearAllData(){
+      if(!confirm('This will remove ALL data in browser (users, slots, bookings). Proceed?')) return;
+      localStorage.removeItem(STORAGE.users); localStorage.removeItem(STORAGE.slots); localStorage.removeItem(STORAGE.bookings);
+      localStorage.removeItem('mf_admin_session'); localStorage.removeItem('mf_client_session');
+      ensureAdminSeed(); admin=null; client=null; renderStatus(); alert('All local data cleared. Admin re-seeded.');
+    }
+
+    /* misc UI actions */
+    function showLogin(){ qs('#accountUnauthed').classList.add('hidden'); qs('#clientLoginBox').classList.remove('hidden'); }
+    function showRegister(){ qs('#clientLoginBox').classList.add('hidden'); qs('#accountUnauthed').classList.remove('hidden'); }
+
+    /* wire up UI */
+    // tabs
+    qsa('#publicTabs .tab').forEach(t=> t.onclick = ()=>{
+      qsa('#publicTabs .tab').forEach(x=>x.classList.remove('active')); t.classList.add('active');
+      const tab = t.dataset.tab;
+      qs('#panel-browse').classList.toggle('hidden', tab!=='browse');
+      qs('#panel-my').classList.toggle('hidden', tab!=='my');
+      qs('#panel-account').classList.toggle('hidden', tab!=='account');
+    });
+
+    // client register/login buttons
+    qs('#btnRegister').onclick = ()=> registerClient({
+      username: qs('#regUsername').value.trim(),
+      password: qs('#regPassword').value,
+      name: qs('#regName').value.trim(),
+      email: qs('#regEmail').value.trim()
+    });
+    qs('#showClientLogin').onclick = showLogin;
+    qs('#showRegister').onclick = showRegister;
+    qs('#btnLogin').onclick = ()=> loginClient(qs('#loginUser').value.trim(), qs('#loginPass').value);
+
+    qs('#btnClientLogout').onclick = ()=> { if(confirm('Sign out?')) logoutClient(); };
+
+    // admin login
+    qs('#btnAdminLogin').onclick = ()=> loginAdmin(qs('#adminUser').value.trim(), qs('#adminPass').value);
+    qs('#btnAdminLogout').onclick = ()=> { if(confirm('Sign out admin?')) logoutAdmin(); };
+
+    // add slot
+    qs('#btnAddSlot').onclick = ()=> {
+      if(!admin) return alert('Sign in as admin');
+      addSlot(qs('#slotDate').value, qs('#slotTime').value);
+    };
+    qs('#btnBulkAdd').onclick = ()=> {
+      if(!admin) return alert('Sign in as admin');
+      const date = qs('#slotDate').value, time = qs('#slotTime').value;
+      if(!date || !time) return alert('Pick date & time');
+      const base = new Date(date+'T00:00:00');
+      const slots = getSlots();
+      for(let i=0;i<7;i++){
+        const dt = new Date(base); dt.setDate(base.getDate()+i);
+        const d = dt.toISOString().slice(0,10);
+        if(!slots.some(s=>s.date===d && s.start===time)){
+          slots.push({ id: uid('slot'), date:d, start:time, end: computeEnd(time), createdAt:new Date().toISOString() });
+        }
+      }
+      saveSlots(slots); renderAdminSlots(); renderPublic(); alert('Added repeat slots for next 7 days (duplicates skipped).');
+    };
+
+    // delete/approve/reject handled in render with delegated listeners (re-render attaches them)
+
+    // bookings actions (delegated by re-rendering functions)
+
+    // export/import
+    qs('#btnExport').onclick = exportAll;
+    qs('#btnExportAll').onclick = exportAll;
+    qs('#btnExportAll').title = 'Export full JSON backup';
+    qs('#btnExportMy').onclick = exportClientBookings;
+
+    qs('#btnImport').onclick = ()=> {
+      const inp = document.createElement('input'); inp.type='file'; inp.accept='.json';
+      inp.onchange = ()=> { if(inp.files[0]) importAllFile(inp.files[0]); };
+      inp.click();
+    };
+    qs('#btnImportAll').onclick = qs('#btnImport').onclick;
+
+    qs('#btnClearAll').onclick = clearAllData;
+
+    // reset site (keeps seeded admin)
+    qs('#btnResetSite').onclick = ()=> {
+      if(!confirm('Reset site data? This will clear sessions and user-created data, admin will be preserved.')) return;
+      const adminUser = getUsers().find(u=>u.isAdmin);
+      localStorage.clear();
+      if(adminUser) save(STORAGE.users, [adminUser]);
+      ensureAdminSeed(); admin=null; client=null; renderStatus(); alert('Site reset (admin preserved).');
+    };
+
+    // "Open" button scrolls to top / focuses
+    qs('#openLogin').onclick = ()=> { window.scrollTo({top:0,behavior:'smooth'}); qs('#openLogin').blur(); };
+
+    // Home guide
+    qs('#btnHomeGuide').onclick = ()=> {
+      alert('To install on iPhone: Open this page in Safari → tap Share → Add to Home Screen → Add. The app will open full-screen.');
+    };
+
+    // delegation: approve/reject/delete/booking requests: re-render adds handlers (we call render functions after each change)
+
+    // helper functions used by UI rendering (to attach handlers after rendering)
+    // We'll re-render and handlers are inline in render functions.
+
+    // small utility to attach event handlers after creating elements (render functions do so)
+
+    /* Initial render */
+    renderStatus();
+
+    /* Expose a few functions to the render closures */
+    window.requestBooking = requestBooking;
+    window.cancelBooking = cancelBooking;
+    window.approveBooking = approveBooking;
+    window.rejectBooking = rejectBooking;
+    window.addSlot = addSlot;
+    window.exportAll = exportAll;
+    window.importAllFile = importAllFile;
+
+    /* Attach global delegated listeners because dynamic buttons are re-created */
+    document.addEventListener('click', function(e){
+      const target = e.target;
+      // client request buttons (class btnRequest)
+      if(target.classList.contains('btnRequest')){ /* handled earlier via render binding */ }
+      // admin approve
+      if(target.classList.contains('btnApprove')) { const id = target.dataset.id; if(confirm('Approve?')) approveBooking(id); }
+      if(target.classList.contains('btnReject')) { const id = target.dataset.id; if(confirm('Reject?')) rejectBooking(id); }
+      if(target.classList.contains('btnDel')) { const id = target.dataset.id; if(confirm('Delete slot?')) deleteSlot(id); }
+      if(target.classList.contains('btnCancel')) { const id = target.dataset.id; if(confirm('Remove booking?')) cancelBooking(id); }
+    });
+
+    /* re-render on load to attach button handlers inside the current functions */
+    // small interval to attach handlers created inside renderPublic
+    setInterval(()=>{ try{ renderPublic(); renderAdmin(); } catch(e){} }, 12000);
+
+    // expose helper to compute end time
+    window.computeEnd = computeEnd;
+    // attach register/login click listeners that call functions above (in case render reattached)
+    qs('#btnRegister').onclick = ()=> registerClient({
+      username: qs('#regUsername').value.trim(),
+      password: qs('#regPassword').value,
+      name: qs('#regName').value.trim(),
+      email: qs('#regEmail').value.trim()
+    });
+    qs('#btnLogin').onclick = ()=> loginClient(qs('#loginUser').value.trim(), qs('#loginPass').value);
+    qs('#btnAdminLogin').onclick = ()=> loginAdmin(qs('#adminUser').value.trim(), qs('#adminPass').value);
+
+    // ensure UI shows sessions
+    renderStatus();
+
+  })();
+  </script>
+</body>
+</html>
